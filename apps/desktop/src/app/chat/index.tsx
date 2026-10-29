@@ -43,6 +43,7 @@ import {
   $introSeed,
   $resumeExhaustedSessionId,
   $sessions,
+  $unlistedSessionOwnerRows,
   getSessionOwnerHint,
   resolveComposerSessionKey,
   sessionMatchesStoredId,
@@ -576,6 +577,23 @@ const ChatViewContent = memo(function ChatViewContent({
   const selectedSessionId = useStore(view.$storedId)
   const sessions = useStore($sessions)
   const resumeExhaustedSessionId = useStore($resumeExhaustedSessionId)
+  // A DRAFT SESSION paints the splash too (see shouldShowIntro): a real
+  // session that reports zero messages everywhere — the unlisted drafts minted
+  // by the tab-strip "+", ⌘T and ⌘N (their off-list owner stubs carry
+  // message_count 0), and a restored blank draft once its row resolves. A row
+  // KNOWN to have history (message_count > 0) disqualifies this view even
+  // while its transcript is still loading, so a restored tab never flashes
+  // the splash mid-resume.
+  const unlistedOwnerRows = useStore($unlistedSessionOwnerRows)
+
+  const draftSession =
+    Boolean(storedId) &&
+    messagesEmpty &&
+    (storedId
+      ? ![...sessions, ...unlistedOwnerRows].some(
+          row => sessionMatchesStoredId(row, storedId) && sessionShouldHaveTranscript(row)
+        )
+      : false)
 
   // Durable composer/queue scope (lineage root) so auto-compression tip rotation
   // does not wipe an in-progress draft or orphan /queue entries. For the
@@ -641,6 +659,7 @@ const ChatViewContent = memo(function ChatViewContent({
   const showIntro = shouldShowIntro({
     activeSessionId,
     auxiliaryWindow: isAuxiliaryWindow(),
+    draftSession,
     enabled: introSplash,
     freshDraftReady,
     messagesEmpty,

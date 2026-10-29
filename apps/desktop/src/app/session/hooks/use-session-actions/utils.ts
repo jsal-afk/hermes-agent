@@ -12,7 +12,7 @@ import {
   textPart,
   toChatMessages
 } from '@/lib/chat-messages'
-import { normalizePersonalityValue } from '@/lib/chat-runtime'
+import { NEW_SESSION_TITLE, normalizePersonalityValue } from '@/lib/chat-runtime'
 import { embeddedImageUrls, textWithoutEmbeddedImages } from '@/lib/embedded-images'
 import { parseErrorSurface } from '@/lib/error-surface'
 import { isMessagingSource, normalizeSessionSource } from '@/lib/session-source'
@@ -1704,13 +1704,20 @@ export function upsertOptimisticSession(
  * an unrouted create, exact connection tag for a routed one — and rides only
  * the owner-lookup path, never the sidebar render path. A later real row for
  * the same id shadows it; the first send replaces it outright.
+ *
+ * The stub is TITLED "New session": every surface that resolves a row through
+ * `ownerLookupSessionRows` (the tab strip's `tileTitle`, the document header)
+ * must read the same placeholder a pure view-reset draft does, not
+ * `sessionTitle()`'s "Untitled session" fallback — an untouched draft is
+ * "new", not "untitled". Client-side only: the backend row stays untitled, so
+ * derived/llm auto-titling still lands on the first exchange.
  */
 export function upsertUnlistedSessionOwner(
   created: SessionCreateResponse,
   id: string,
   owner?: null | SessionProfileRoute
 ) {
-  const stub = buildOptimisticSession(created, id, null, null, null, undefined, owner)
+  const stub = buildOptimisticSession(created, id, NEW_SESSION_TITLE, null, null, undefined, owner)
   setSessionOwnerHintForStub(id, owner)
   setUnlistedSessionOwnerRows(prev => [stub, ...prev.filter(s => s.id !== id)])
 }
